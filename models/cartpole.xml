@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  模型用途：中心电机驱动水平转臂，转臂末端连接一个自由摆动的竖直摆杆。
+
+  坐标约定：MuJoCo 默认 z 轴向上；长度单位是米；角度由 compiler 的 angle 设置为弧度。
+  结构关系：world -> motor_base -> horizontal_link -> pendulum_link。
+-->
+<mujoco model="水平转臂与被动摆杆">
+  <!-- angle="radian" 表示关节角度范围用弧度；本文件的角度数值都按弧度解释。 -->
+  <compiler angle="radian" />
+
+  <!-- 仿真设置：每个物理步长 0.002 秒；重力沿 z 轴向下；使用 implicitfast 积分器。 -->
+  <option timestep="0.002" gravity="0 0 -9.81" integrator="implicitfast" />
+
+  <!-- 仿真窗口绘图缓冲区的宽高，不决定机器人尺寸。 -->
+  <visual>
+    <global offwidth="1200" offheight="900" />
+    <!-- 地面网格的绘制细分间距。 -->
+    <map znear="0.01" />
+  </visual>
+
+  <!-- 蓝色棋盘格地面纹理，以及表面高光/反射外观。 -->
+  <asset>
+    <texture name="floor_checker" type="2d" builtin="checker"
+             width="512" height="512"
+             rgb1="0.06 0.16 0.42" rgb2="0.16 0.34 0.68" />
+    <material name="blue_floor" texture="floor_checker" texrepeat="4 4"
+              specular="0.7" shininess="0.8" reflectance="0.25" />
+  </asset>
+
+  <!-- worldbody 是场景根节点，里面直接放置地面、灯光和机器人根部。 -->
+  <worldbody>
+    <!-- 场景光源：位置在 (0, 0, 3)，朝 z 轴负方向照射。 -->
+    <light name="sun" pos="0 0 8" dir="0 0 -1" />
+
+    <!-- 地面平面；size 前两个值决定显示区域半尺寸，碰撞平面本身是无限的。 -->
+    <geom name="floor" type="plane" size="10 10 0.1" material="blue_floor"
+          friction="1 0.02 0.001" />
+
+    <!-- 中心电机外壳的刚体。pos 是相对 world 的位置，所以转轴中心离地 0.8 米。 -->
+    <body name="motor_base" pos="0 0 1.6">
+      <!-- 可视化/碰撞用圆柱外壳；cylinder 的 size 是半径和半高。 -->
+      <!-- 外壳只用于显示；关闭碰撞，避免它在转轴处顶住水平臂。 -->
+      <geom name="motor_housing" type="cylinder" size="0.08 0.06" mass="0.3"
+            contype="0" conaffinity="0" rgba="0.25 0.25 0.28 1" />
+
+      <!-- 水平转臂刚体；没有写 pos，表示它的关节原点与 motor_base 原点重合。 -->
+      <body name="horizontal_link">
+        <!-- 中心驱动关节：绕本地 z 轴连续转动，有少量阻尼。 -->
+        <joint name="motor_yaw" type="hinge" pos="0 0 0" axis="0 0 1"
+               limited="false" damping="0.05" />
+
+        <!-- 水平臂：capsule 是胶囊体；fromto 给出两端点；size=0.035 是胶囊半径。 -->
+        <geom name="horizontal_arm" type="capsule" fromto="0 0 0 0.8 0 0"
+              mass="0.05"
+              size="0.035" rgba="0.9 0.12 0.12 1" />
+
+        <!-- 臂端的球形标记，中心位于 x=0.8 米处，用来突出摆杆连接位置。 -->
+        <geom name="arm_tip" type="sphere" pos="0.8 0 0" size="0.06" mass="0.02"
+              rgba="0.15 0.5 1 1" />
+
+        <!-- 摆杆刚体的关节原点位于水平臂末端，即本地 x=0.8 米处。 -->
+        <body name="pendulum_link" pos="0.8 0 0">
+          <!-- 被动铰链：绕局部 x 轴转动，摆杆在局部 y-z 平面内摆动；此处不安装电机。 -->
+          <joint name="passive_hinge" type="hinge" axis="1 0 0"
+                 damping="0.01" />
+
+          <!-- 摆杆胶囊：从关节原点向下延伸 0.65 米，半径 0.025 米。 -->
+          <geom name="pendulum_rod" type="capsule" fromto="0 0 0 0 0 -0.65"
+                mass="0.03"
+                size="0.025" rgba="0.9 0.25 0.12 1" />
+
+          <!-- 摆杆末端的球形配重；球心距关节 0.65 米，质量 0.5 千克。 -->
+          <geom name="pendulum_mass" type="sphere" pos="0 0 -0.65" size="0.09"
+                mass="0.5" rgba="0.95 0.65 0.1 1" />
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <!-- 唯一的执行器是中心电机，它只驱动水平臂绕竖直轴旋转。 -->
+  <actuator>
+    <motor name="center_motor" joint="motor_yaw" ctrlrange="-10 10" />
+  </actuator>
+</mujoco>

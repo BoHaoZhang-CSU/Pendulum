@@ -1,0 +1,22 @@
+﻿# Python 虚拟环境
+.venv*/
+venv/
+
+# Python 缓存和打包产物
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+*.egg-info/
+
+# 训练结果、checkpoint 和 TensorBoard 日志
+outputs/
+
+# 编辑器和系统生成的本地文件
+.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db

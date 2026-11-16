@@ -1,0 +1,5 @@
+﻿mujoco
+gymnasium
+numpy
+stable-baselines3
+tensorboard
